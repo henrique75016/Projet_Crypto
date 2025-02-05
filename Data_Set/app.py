@@ -75,6 +75,8 @@ def histo():
     data = data[data['name'] == test]
     return data
 
+
+
 # Determination du nombre de page et de la selection 
 def page():
     if selection == 'Accueil':
