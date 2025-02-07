@@ -35,22 +35,6 @@ def price_history(coin_id, currency="usd", days=365):
 # Fonction de la page d'accueil
 def accueil():
     st.markdown("""
-        <h1 style="text-align: center;">Bienvenue sur votre appli Crypto</h1>
-        """, unsafe_allow_html=True)
-    st.markdown("""
-        <h2 style="text-align: center;">Designed by</h2>
-        """, unsafe_allow_html=True)
-    image_path = 'Projet3_image_sf.png'
-    with open(image_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode()
-    st.markdown(f"""
-            <div style="display: flex; justify-content: center">
-            <img src="data:image/png;base64,{encoded_string}" style="width: 300px; height: 300px;"/>
-            </div>
-            """, unsafe_allow_html=True)
-
-    
-    st.markdown("""
     <span style= "font-size : 30px; font-weight: bold; color: goldenrod">
     <u>Qu'est-ce qu'une cryptomonnaie ?</u></span><br>
     C'est de l'argent numérique, sans lien avec les banques traditionnelles, sécurisé par la cryptographie et basé sur une technologie appelée blockchain.<br>
@@ -88,23 +72,21 @@ def accueil():
         , unsafe_allow_html=True)
   
 # Fonction de la page Details
-def details():
-    st.image('Projet3_image_sf.png', width=100)
-    st.markdown("""
-        <h2 style="text-align: center;">La Crypto en détail</h2>
-        """, unsafe_allow_html=True)
-     
+def details():     
     df = pd.read_csv('histo1_generator.csv')    
     coin_id = st.selectbox("Quelle Crypto veux tu choisir :", df['id'])
     df_hist = price_history(coin_id)    
-    #st.dataframe(df_hist, use_container_width=True)
-    df_hist
+    #df_hist
     fig = px.line(df_hist, x="timestamp", y=f"{coin_id}_price", 
                 title=f"Histogramme des prix de {coin_id.capitalize()} de {df_hist['timestamp'][0]} à {df_hist['timestamp'][365]}",
                 labels={"timestamp": "Date", f"{coin_id}_price": "Prix"})
-    fig.update_traces(line=dict(color='yellow'))
+    fig.update_traces(line=dict(color='Yellow'))
     st.plotly_chart(fig, use_container_width=False)
-    
+    maxi = round(df_hist[f'{coin_id}_price'].max(),2)
+    mini = df_hist[f'{coin_id}_price'].min()
+    st.write(f"La valeur maximale sur l'année est de {maxi}$")
+    st.write(f"La valeur minimale sur l'année est de {mini}$")
+
 # Fonction de historique des crypto sur 5 ans
 def histo():
     data = pd.read_csv('historical1_5_years_generator.csv')
@@ -134,27 +116,59 @@ def test():
 # Determination du nombre de page et de la selection 
 def page():
     if selection == 'Accueil':
+        # Mise en page des titres et du séparateur entre l'en-tête et le reste 
+        st.markdown("""
+        <h1 style="text-align: center; color: goldenrod ">Bienvenue sur votre appli Crypto</h1>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        <h4 style="text-align: center; color: goldenrod">Designed by</h4>
+        """, unsafe_allow_html=True)
+        image_path = 'Projet3_image_sf.png'
+        with open(image_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center">
+            <img src="data:image/png;base64,{encoded_string}" style="width: 300px; height: 300px;"/>
+            </div>
+            """, unsafe_allow_html=True)
+        st.divider()
+        
+        # Appel de la fonction accueil 
         accueil()
         
 
     # Si selection de la page details    
     elif selection == 'Details':
-        details()
+        col_1, col_2, col3 = st.columns(3, vertical_alignment='center')
+        with col_1:
+            st.image('Projet3_image_sf.png', width=100)
+        with col_2:
+            st.markdown("""
+        <h2 style="text-align: center; color: goldenrod">La Crypto en détail</h2>
+        """, unsafe_allow_html=True)
+        st.text("")
+        st.divider()
         st.markdown("""
     <h6 style="text-align: center;">Tableau des différentes cryptomonnaie</h6>
     """, unsafe_allow_html=True)
-    
+        # Affichage du Dataframe des crypto avec le details sur 24h 
         df_acc = pd.read_csv('histo1_generator.csv')
         df_acc = df_acc[['Rank','symbol','name','current_price','Variation % 24h','market_cap','total_volume','circulating_supply','high_24h','low_24h']]
-        st.dataframe(df_acc.iloc[0:10,::], use_container_width=True)
+        st.dataframe(df_acc, use_container_width=True)
+        # appel de la fonction Details pour afficher un lineplot des mouvement d'une crypto sur 365 jours
+        st.divider()
+        details()
+       
 
     # Si selection de la page Historique 
     elif selection == 'Histo':
         data = histo()
-        data
+        #data
         fig1 = px.line(data, x='date',y='price')
+        fig1.update_traces(line=dict(color='goldenrod'))
         st.plotly_chart(fig1, use_container_width=True)
-    
+        
+
     # Si selection de la page ??
     elif selection =='test':
         database = test()
@@ -173,7 +187,7 @@ def page():
             xaxis_title="Date",  
             yaxis_title="Price (USD)")
         st.plotly_chart(figure, use_container_width=True)
-
+        
         st.header("Pourquoi BTC-USD est continu ?")
         st.write("""Les crypto-monnaies comme Bitcoin (BTC-USD) ne sont pas limitées aux horaires de la bourse. Elles s'échangent tout le temps sur diverses plateformes mondiales (Binance, Coinbase, Kraken, etc.).
 Ainsi, le graphique de BTC-USD est continu, car il reflète un marché sans interruption.
