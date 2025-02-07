@@ -6,8 +6,7 @@ import plotly.express as px
 from PIL import Image
 import base64
 import yfinance as yf
-from datetime import datetime
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 import plotly.graph_objects as go
 import time
 
@@ -73,20 +72,33 @@ def accueil():
   
 # Fonction de la page Details
 def details():     
+    
     df = pd.read_csv('histo1_generator.csv')    
     coin_id = st.selectbox("Quelle Crypto veux tu choisir :", df['id'])
     df_hist = price_history(coin_id)    
     #df_hist
+    datedeb = df_hist['timestamp'][0].strftime("%Y-%m-%d")
+    datefin = df_hist['timestamp'][365]+timedelta(hours=1)
+    
     fig = px.line(df_hist, x="timestamp", y=f"{coin_id}_price", 
-                title=f"Histogramme des prix de {coin_id.capitalize()} de {df_hist['timestamp'][0]} à {df_hist['timestamp'][365]}",
+                title=f"Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}",
                 labels={"timestamp": "Date", f"{coin_id}_price": "Prix"})
-    fig.update_traces(line=dict(color='Yellow'))
+    fig.update_traces(line=dict(color='goldenrod'))
     st.plotly_chart(fig, use_container_width=False)
     maxi = round(df_hist[f'{coin_id}_price'].max(),2)
-    mini = df_hist[f'{coin_id}_price'].min()
-    st.write(f"La valeur maximale sur l'année est de {maxi}$")
-    st.write(f"La valeur minimale sur l'année est de {mini}$")
-
+    mini = round(df_hist[f'{coin_id}_price'].min(),2)
+    current = round(df_hist[f'{coin_id}_price'][365],2)
+    st.markdown(f"<h2 style='text-align: center;line-height: 0.1'>La valeur sur l'année<br></h2>", unsafe_allow_html=True)
+    col_a, col_b, col_c = st.columns(3, vertical_alignment='top')
+    
+    with col_a:
+        st.markdown(f"<h3 style='text-align: center;'>Minimale<br><span style='color: red;font-size : 45px; display: inline-block;'>{ mini}$</span></h3>", unsafe_allow_html=True)
+    with col_b:
+        st.markdown(f"<h4 style='text-align: center;;'>Courante<br> <span style='color: goldenrod; font-size : 45px;'>{current}$</span></h4>", unsafe_allow_html=True)
+    with col_c:
+        st.markdown(f"<h4 style='text-align: center;'>La valeur maximale sur l'année<br> <span style='color: green;font-size : 45px;text-align: center;'>{maxi}$</span></h4>", unsafe_allow_html=True)
+    
+    
 # Fonction de historique des crypto sur 5 ans
 def histo():
     data = pd.read_csv('historical1_5_years_generator.csv')
@@ -208,9 +220,8 @@ with st.sidebar:
     date = datetime.now()
     format_date = date.strftime("%d-%m-%Y")
     format_heure = date.strftime("%H:%M")
-    st.write(f"{format_date}")
-    st.write(f"{format_heure}")
-    
+    st.markdown(f"<h4 style='text-align: center;'>{format_date}</h4>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='text-align: center;'>{format_heure}</h4>", unsafe_allow_html=True)
     st.image('Projet3_image_sf.png', width= 250)
     selection = option_menu(
             menu_title=None,
@@ -223,4 +234,3 @@ page()
 #image_url = f"https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png?1696501400"
 #if image_url:
 #    st.image(image_url, width=200)
-
