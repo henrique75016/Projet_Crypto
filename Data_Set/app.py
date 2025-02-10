@@ -12,6 +12,13 @@ import time
 
 # Elargissement des marges des pages 
 st.set_page_config(layout="wide")
+st.markdown("""
+    <style>
+        body {
+            background-color: black;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Utilisation de l'APi pour un historique sur 365 jours 
 def price_history(coin_id, currency="usd", days=365):
@@ -130,17 +137,17 @@ def page():
     if selection == 'Accueil':
         # Mise en page des titres et du séparateur entre l'en-tête et le reste 
         st.markdown("""
-        <h1 style="text-align: center; color: goldenrod ">Bienvenue sur votre appli Crypto</h1>
+        <h1 style="text-align: center; color: goldenrod; line-height: 0.1">Bienvenue sur votre appli Crypto</h1>
         """, unsafe_allow_html=True)
         st.markdown("""
-        <h4 style="text-align: center; color: goldenrod">Designed by</h4>
+        <h4 style="text-align: center; color: goldenrod;line-height: 0.1">Designed by</h4>
         """, unsafe_allow_html=True)
         image_path = 'Projet3_image_sf.png'
         with open(image_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode()
         st.markdown(f"""
-            <div style="display: flex; justify-content: center">
-            <img src="data:image/png;base64,{encoded_string}" style="width: 300px; height: 300px;"/>
+            <div style="display: flex; justify-content: center;margin-top: -50px;margin-bottom: -50px;margin-left: -35px">
+            <img src="data:image/png;base64,{encoded_string}" style="width: 300px; height: 300px"/>
             </div>
             """, unsafe_allow_html=True)
         st.divider()
