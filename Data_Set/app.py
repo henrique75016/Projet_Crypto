@@ -9,6 +9,7 @@ import yfinance as yf
 from datetime import datetime, date, timedelta
 import plotly.graph_objects as go
 import time
+import io
 
 # Mise en page et style 
 st.set_page_config(layout="wide") # Elargissement des marges des pages 
@@ -71,24 +72,47 @@ def accueil():
         , unsafe_allow_html=True)
 
 def evolution():
-        df = pd.read_csv('histo1_generator.csv')   
+        #Recuperation du lien Github
+        url = "https://raw.githubusercontent.com/henrique75016/Projet_Crypto/main/Data_Set/histo1_generator.csv"
+        
+        # Creation de la fonction pour chatger automatiquement le dernier lien github 
+        def download_file_from_github(url):
+            response = requests.get(url)
+            if response.status_code == 200:
+                return pd.read_csv(io.StringIO(response.text))
+            else:
+                print(f"Erreur lors du téléchargement du fichier : {response.status_code}")
+                return None
+            
+        # Appel de la fonction 
+        df = download_file_from_github(url)
+        df_copy = df.copy()
+        df_copy = df_copy[['Rank','symbol','name','current_price','Variation % 24h','market_cap','total_volume','circulating_supply','high_24h','low_24h']]
+        st.write('Dernière MAJ', df['last_updated'][0])
+        
+        # Appliquation du dégradé de couleur
+        styled_df = df_copy.style.background_gradient(cmap='RdYlGn', subset=['Variation % 24h'])
+        st.dataframe(styled_df, use_container_width=True)
+
+        # Choix de la crypto ppur afficher les graphs
         coin_id = st.selectbox("Quelle Crypto veux tu choisir :", df['id'])
         df_hist = price_history(coin_id) 
         coin_symbol = df.loc[df['id'] == coin_id, 'symbol'].values[0]  
         datedeb = df_hist['timestamp'][0].strftime("%Y-%m-%d")
         datefin = df_hist['timestamp'][365]+timedelta(hours=1)
-    
+
+        # Graph sur les 365j
         fig = px.line(df_hist, x="timestamp", y=f"{coin_id}_price", 
                 title=f"Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}",
                 labels={"timestamp": "Date", f"{coin_id}_price": "Prix"})
         fig.update_traces(line=dict(color='goldenrod'))
         fig.update_layout( title_font=dict(color='goldenrod'))  
-    
         st.plotly_chart(fig, use_container_width=False)
+        
+        # Recherche du min, max et prix courant 
         maxi = round(df_hist[f'{coin_id}_price'].max(),2)
         mini = round(df_hist[f'{coin_id}_price'].min(),2)
         current = round(df_hist[f'{coin_id}_price'][365],2)
-    
         st.markdown(f"<h2 style='text-align: center;line-height: 0.1'>La valeur sur l'année<br></h2>", unsafe_allow_html=True)
         col_a, col_b, col_c = st.columns(3, vertical_alignment='top')
         with col_a:
@@ -97,51 +121,18 @@ def evolution():
             st.markdown(f"<h4 style='text-align: center;;'>Courante<br> <span style='color: goldenrod; font-size : 45px;'>{current}$</span></h4>", unsafe_allow_html=True)
         with col_c:
             st.markdown(f"<h4 style='text-align: center;'>Maximale<br> <span style='color: green;font-size : 45px;text-align: center;'>{maxi}$</span></h4>", unsafe_allow_html=True)
+        
+        st.divider()
+
+        # Dataframe pour l'historique des 5 ans 
         data = pd.read_csv('historical1_5_years_generator.csv')
-        #test = st.selectbox("Quelle Crypto veux tu choisir :", data['symbol'])
         data = data[data['symbol'] == coin_symbol]
+        
+        # Graph en fonction de la crypto choisi sur le 1er graph 
         fig1 = px.line(data, x='date',y='price')
         fig1.update_traces(line=dict(color='goldenrod'))
+        st.markdown(f"<h5 style='text-align: center;line-height: 0.05'>Historique d'évolution sur les 5 dernières années</h5>", unsafe_allow_html=True)
         st.plotly_chart(fig1, use_container_width=True)
-
-
-
-
-# Fonction de la page Details
-def details():     
-    df = pd.read_csv('histo1_generator.csv')   
-    coin_id = st.selectbox("Quelle Crypto veux tu choisir :", df['id'])
-    df_hist = price_history(coin_id) 
-    coin_symbol = df.loc[df['id'] == coin_id, 'symbol'].values[0]  
-    datedeb = df_hist['timestamp'][0].strftime("%Y-%m-%d")
-    datefin = df_hist['timestamp'][365]+timedelta(hours=1)
-    
-    fig = px.line(df_hist, x="timestamp", y=f"{coin_id}_price", 
-                title=f"Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}",
-                labels={"timestamp": "Date", f"{coin_id}_price": "Prix"})
-    fig.update_traces(line=dict(color='goldenrod'))
-    fig.update_layout( title_font=dict(color='goldenrod'))  
-    
-    st.plotly_chart(fig, use_container_width=False)
-    maxi = round(df_hist[f'{coin_id}_price'].max(),2)
-    mini = round(df_hist[f'{coin_id}_price'].min(),2)
-    current = round(df_hist[f'{coin_id}_price'][365],2)
-    
-    st.markdown(f"<h2 style='text-align: center;line-height: 0.1'>La valeur sur l'année<br></h2>", unsafe_allow_html=True)
-    col_a, col_b, col_c = st.columns(3, vertical_alignment='top')
-    with col_a:
-        st.markdown(f"<h3 style='text-align: center;'>Minimale<br><span style='color: red;font-size : 45px; display: inline-block;'>{ mini}$</span></h3>", unsafe_allow_html=True)
-    with col_b:
-        st.markdown(f"<h4 style='text-align: center;;'>Courante<br> <span style='color: goldenrod; font-size : 45px;'>{current}$</span></h4>", unsafe_allow_html=True)
-    with col_c:
-        st.markdown(f"<h4 style='text-align: center;'>Maximale<br> <span style='color: green;font-size : 45px;text-align: center;'>{maxi}$</span></h4>", unsafe_allow_html=True)
- 
-# Fonction de historique des crypto sur 5 ans
-#def histo():
-    data = pd.read_csv('historical1_5_years_generator.csv')
-    test = st.selectbox("Quelle Crypto veux tu choisir :", data['symbol'])
-    data = data[data['symbol'] == test]
-    return data
 
 # Fonction de Fabrice sur le Web Scarpping 
 def BTC_USD():
@@ -162,7 +153,6 @@ def BTC_USD():
     data.columns = [col[0] if isinstance(col, tuple) else col for col in data.columns]
     return data
 
-
 # Determination du nombre de page et de la selection 
 def page():
     if selection == 'Accueil':
@@ -181,12 +171,11 @@ def page():
             <img src="data:image/png;base64,{encoded_string}" style="width: 300px; height: 300px"/>
             </div>
             """, unsafe_allow_html=True)
-        st.divider()
         
-        # Appel de la fonction accueil 
+        st.divider()   
+        # Appel de la fonction accueil
         accueil()
         
-
     # Si selection de la page details    
     elif selection == 'Details':
         col_1, col_2, col3 = st.columns(3, vertical_alignment='center')
@@ -199,6 +188,7 @@ def page():
             <img src="data:image/png;base64,{encoded_string}" style="width: 100px; height: 100px"/>
             </div>
             """, unsafe_allow_html=True)
+        
         with col_2:
             st.markdown("""
         <h3 style="text-align: center; color: goldenrod">La Crypto en détail</h3>
@@ -206,28 +196,14 @@ def page():
         st.text("")
         st.divider()
         st.markdown("""
-    <h6 style="text-align: center;color: goldenrod">Tableau des différentes cryptomonnaies</h6>
-    """, unsafe_allow_html=True)
-        # Affichage du Dataframe des crypto avec le details sur 24h 
-        df_acc = pd.read_csv('histo1_generator.csv')
-        df_acc = df_acc[['Rank','symbol','name','current_price','Variation % 24h','market_cap','total_volume','circulating_supply','high_24h','low_24h']]
-        # Appliquer un dégradé de couleur (rouge pour les valeurs négatives, vert pour les valeurs positives)
-        styled_df = df_acc.style.background_gradient(cmap='RdYlGn', subset=['Variation % 24h'],vmin=-1, vmax=10)
-        st.dataframe(styled_df, use_container_width=True)
+        <h6 style="text-align: center;color: goldenrod">Tableau des différentes cryptomonnaies</h6>
+        """, unsafe_allow_html=True)
         
-        # appel de la fonction Details pour afficher un lineplot des mouvement d'une crypto sur 365 jours
-        st.divider()
-        #details()
+        # Appel de la fonction evolution pour afficher les valeurs les les courbes d'évolution
         evolution()
         st.text("")
         st.text("")
-        #data = histo()
-        #data
-        #fig1 = px.line(data, x='date',y='price')
-        #fig1.update_traces(line=dict(color='goldenrod'))
-        #st.plotly_chart(fig1, use_container_width=True)
-       
-
+    
     # Si selection de la page Historique 
     elif selection == 'Histo': 
         database = BTC_USD()
@@ -262,8 +238,8 @@ BTC-USD = Bitcoin coté en dollars, échangé en continu 24/7 → Graphique sans
 BTC = Un produit financier (ETF, indice) coté en bourse traditionnelle → Graphique avec des espaces car la bourse ferme la nuit et les week-ends""")
 
     elif selection == 'test':
-        test()
-
+        return
+ 
 # Création du sidebar avec les différentes pages 
 with st.sidebar:
     date = datetime.now()
