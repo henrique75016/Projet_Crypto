@@ -1,0 +1,7 @@
+# config.toml
+[theme]
+primaryColor = "goldenrod"
+backgroundColor = "black"
+secondaryBackgroundColor = "#1c1c1c"
+textColor = "white"
+font = "monospace"
