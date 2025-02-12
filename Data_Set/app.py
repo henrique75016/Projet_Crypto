@@ -1,5 +1,6 @@
 import pandas as pd 
 import streamlit as st
+import numpy as np
 from streamlit_option_menu import option_menu
 import requests
 import plotly.express as px
@@ -10,6 +11,10 @@ from datetime import datetime, date, timedelta
 import plotly.graph_objects as go
 import time
 import io
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import StandardScaler
 
 # Mise en page et style 
 st.set_page_config(layout="wide") # Elargissement des marges des pages 
@@ -141,10 +146,9 @@ def evolution():
 
         st.text("")
         st.text("")
-        st.markdown(f"<h3 style='text-align: center;color: goldenrod'>Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}</h3>",unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align: center;color: goldenrod'>{coin_id.capitalize()} : Variaton des prix de {datedeb} à {datefin}</h3>",unsafe_allow_html=True)
         # Graph sur les 365j
         fig = px.line(df_hist, x="timestamp", y=f"{coin_id}_price", 
-                #title=f"Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}",
                 labels={"timestamp": "Date", f"{coin_id}_price": "Prix"})
         fig.update_traces(line=dict(color='goldenrod'))
         #fig.update_layout( title_font=dict(color='goldenrod'))  
@@ -170,7 +174,8 @@ def evolution():
         data = data[data['symbol'] == coin_symbol]
         
         # Graph en fonction de la crypto choisi sur le 1er graph 
-        fig1 = px.line(data, x='date',y='price')
+        fig1 = px.line(data, x='date',y='price',
+                       labels={"date": "Date", 'price': "Prix"})
         fig1.update_traces(line=dict(color='goldenrod'))
         st.markdown(f"<h3 style='text-align: center;line-height: 0.05;color: goldenrod'>Historique d'évolution sur les 5 dernières années</h3>", unsafe_allow_html=True)
         st.plotly_chart(fig1, use_container_width=True)
@@ -276,8 +281,154 @@ BTC-USD = Bitcoin coté en dollars, échangé en continu 24/7 → Graphique sans
 BTC = Un produit financier (ETF, indice) coté en bourse traditionnelle → Graphique avec des espaces car la bourse ferme la nuit et les week-ends""")
 
     elif selection == 'test':
-        return
-     
+        dfid = pd.read_csv('histo1_generator.csv')
+        choix  = st.selectbox("Choix de la crypto : ",dfid['symbol'])
+        crypto_search = f'{choix}-USD' # Variable du symbole de la crypto à chercher
+        def prediction(crypto_search):
+            today = date.today()
+            d1 = today.strftime("%Y-%m-%d")
+            end_date = d1
+            periode = 1000 # Variable du nombre de jours a prendre en historique
+            d2 = date.today() - timedelta(days=periode) #periode de reference pour l'historique
+            d2 = d2.strftime("%Y-%m-%d")
+            start_date = d2
+            data = yf.download(crypto_search, start=start_date, end=end_date, progress=False)
+            data["Date"] = data.index
+            data = data[["Date", "Open", "High", "Low", "Close", "Volume"]]
+            data.reset_index(drop=True, inplace=True)
+            return data
+        data = prediction(crypto_search)
+        #data
+                # Réinitialiser l'index pour convertir la colonne 'Date' en une colonne normale
+        data.reset_index(inplace=True)
+
+        # Aplatir les noms des colonnes
+        data.columns = [col[0] if isinstance(col, tuple) else col for col in data.columns]
+
+        # Calcul des indicateurs techniques
+        #Moyenne mobile simple (SMA) à 50 jours (SMA_50) :
+        #La moyenne mobile simple est une moyenne des prix de clôture sur les 50 derniers jours.
+        #Elle permet de lisser les fluctuations des prix sur une période courte pour observer les tendances.
+        #SMA200 pour calculer la moyenne mobile sur plus long terme
+        data['SMA_50'] = data['Close'].rolling(window=50).mean()
+        data['SMA_200'] = data['Close'].rolling(window=200).mean()
+
+        #Relative Strength Index (RSI) :
+        #Le RSI est un indicateur technique qui mesure la vitesse et le changement des mouvements de prix.
+        #Il varie entre 0 et 100 et est souvent utilisé pour détecter des conditions de surachat (RSI > 70)
+        #ou de survente (RSI < 30)
+        delta = data['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        perte = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / perte
+        data['RSI'] = 100 - (100 / (1 + rs))
+
+        #Bandes de Bollinger :
+        #Les bandes de Bollinger sont un indicateur qui consiste en trois lignes :
+        #La moyenne mobile à 50 jours (SMA_50),
+        #La bande supérieure (SMA_50 + 2 fois l'écart-type sur 50 jours),
+        #La bande inférieure (SMA_50 - 2 fois l'écart-type sur 50 jours)."""
+        rolling_std = data['Close'].rolling(window=50).std()
+        data['Upper_BB'] = data['SMA_50'] + 2 * data['Close'].rolling(window=50).std()
+        data['Lower_BB'] = data['SMA_200'] - 2 * data['Close'].rolling(window=50).std()
+
+        # Préparation des données
+        data.dropna(inplace=True)
+
+        X = data[['Open', 'High', 'Low', 'Volume', 'SMA_50', 'SMA_200', 'RSI', 'Upper_BB', 'Lower_BB']]
+        y = data['Close']
+
+        #normalisation - SUPPRIMEE POUR REDUIRE OVERFITTING, TEST SET TROP PRET DU TRAIN SET
+        #scaler = StandardScaler()
+        #X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns) #scaler.fit_transform(X)
+        #X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, shuffle=False)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, shuffle=False, random_state=42)
+        # Création et entraînement du modèle
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+
+        # Évaluation du modèle
+        y_pred = model.predict(X_test)
+        r2 = r2_score(y_test, y_pred)
+        print("Coefficient de détermination R2: ", r2)
+        print('Précision sur le train set : ', round(model.score(X_train, y_train), 3))
+        print('Précision sur le test set :', round(model.score(X_test, y_test), 3))
+
+        # Fonction pour créer les caractéristiques du jour suivant
+        def create_next_day_features(last_row, predictions, data):
+            next_day = last_row.copy()
+            next_day['Open'] = predictions[-1] if len(predictions) > 0 else next_day['Close']
+            next_day['Close'] = np.nan  # À prédire
+            next_day['High'] = next_day['Open']
+            next_day['Low'] = next_day['Open']
+            next_day['Volume'] = next_day['Volume']
+            next_day['Date'] = next_day['Date'] + pd.Timedelta(days=1)
+
+            next_day['SMA_50'] = (data['Close'].iloc[-49:].sum() + next_day['Open']) / 50
+            next_day['SMA_200'] = (data['Close'].iloc[-199:].sum() + next_day['Open']) / 200
+            next_day['RSI'] = next_day['RSI']
+
+            std_50 = data['Close'].iloc[-50:].std()
+            next_day['Upper_BB'] = next_day['SMA_50'] + 2 * std_50
+            next_day['Lower_BB'] = next_day['SMA_50'] - 2 * std_50
+
+            return next_day
+
+        # Prédiction pour les X prochains jours
+        future_days = 15 # variable de jours de prédiction
+        future_predictions = []
+        last_row = data.iloc[-1]
+        future_data = data.copy()
+
+        for i in range(future_days):
+            next_day = create_next_day_features(last_row, future_predictions, future_data)
+            X_next = pd.DataFrame([next_day[['Open', 'High', 'Low', 'Volume', 'SMA_50', 'SMA_200', 'RSI', 'Upper_BB', 'Lower_BB']]])
+            # SUPPRESSION DE LA NORMALISATION
+            #X_next_scaled = pd.DataFrame(scaler.transform(X_next), columns=X_next.columns)
+            #prediction = max(0, model.predict(X_next_scaled)[0])
+            prediction = max(0, model.predict(X_next)[0])
+
+            #X_next = next_day[['Open', 'High', 'Low', 'Volume', 'SMA_50', 'SMA_200', 'RSI', 'Upper_BB', 'Lower_BB']].values.reshape(1, -1)
+            #X_next_scaled = scaler.transform(X_next)
+            #prediction = max(0, model.predict(X_next_scaled)[0])  # Assure une prédiction positive
+            future_predictions.append(prediction)
+            next_day['Close'] = prediction
+            future_data = pd.concat([future_data, pd.DataFrame([next_day])], ignore_index=True)
+            last_row = next_day
+
+        # Création du DataFrame avec les prédictions
+        future_dates = pd.date_range(start=data['Date'].iloc[-1] + pd.Timedelta(days=1), periods=future_days)
+        prediction_df = pd.DataFrame({
+            'Date': future_dates,
+            'Predicted_Close': future_predictions
+        })
+
+        #prediction_df
+
+                # Créer une figure Plotly
+        fig = go.Figure()
+
+        # Ajouter les données historiques
+        fig.add_trace(go.Scatter(x=data['Date'][-30:], y=data['Close'][-30:],
+                                mode='lines',
+                                name='Données historiques'))
+
+        # Ajouter les prédictions
+        fig.add_trace(go.Scatter(x=prediction_df['Date'], y=prediction_df['Predicted_Close'],
+                                mode='lines',
+                                name='Prédictions',
+                                line=dict(dash='dash')))
+
+        # Mise en page du graphique
+        fig.update_layout(title=f'Prix historique et prédictions du {crypto_search.upper()}',
+                        xaxis_title='Date',
+                        yaxis_title='Prix (USD)',
+                        legend_title='Légende',
+                        hovermode='x')
+
+        # Afficher le graphique
+        st.plotly_chart(fig)
+
 # Création du sidebar avec les différentes pages 
 with st.sidebar:
     date = datetime.now()
