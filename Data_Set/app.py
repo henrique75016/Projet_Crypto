@@ -32,6 +32,24 @@ def price_history(coin_id, currency="usd", days=365):
             print(f"Erreur {response.status_code}: {response.text}")
             return None
 
+# Fonction pour récupérer les logos du Dataframe
+def get_crypto_logo(crypto_id):
+    df = pd.read_csv('histo1_generator.csv')
+    image_url = df.loc[df['id'] == crypto_id, 'image'].values
+    if len(image_url) > 0:
+        return image_url[0]
+    else:
+        return None
+
+# Creation de la fonction pour chatger automatiquement le dernier lien github 
+def download_file_from_github(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return pd.read_csv(io.StringIO(response.text))
+    else:
+        print(f"Erreur lors du téléchargement du fichier : {response.status_code}")
+        return None
+
 # Fonction de la page d'accueil
 def accueil():
     st.markdown("""
@@ -74,49 +92,72 @@ def accueil():
 def evolution():
         #Recuperation du lien Github
         url = "https://raw.githubusercontent.com/henrique75016/Projet_Crypto/main/Data_Set/histo1_generator.csv"
-        
-        # Creation de la fonction pour chatger automatiquement le dernier lien github 
-        def download_file_from_github(url):
-            response = requests.get(url)
-            if response.status_code == 200:
-                return pd.read_csv(io.StringIO(response.text))
-            else:
-                print(f"Erreur lors du téléchargement du fichier : {response.status_code}")
-                return None
             
         # Appel de la fonction 
         df = download_file_from_github(url)
         df_copy = df.copy()
         df_copy = df_copy[['Rank','symbol','name','current_price','Variation % 24h','market_cap','total_volume','circulating_supply','high_24h','low_24h']]
-        st.write('Dernière MAJ', df['last_updated'][0])
-        
+
         # Appliquation du dégradé de couleur
-        styled_df = df_copy.style.background_gradient(cmap='RdYlGn', subset=['Variation % 24h'])
+        styled_df = df_copy.style.background_gradient(cmap='RdYlGn', subset=['Variation % 24h'],vmin=-5,vmax=5)
+        st.markdown("""
+        <h3 style="text-align: center;color: goldenrod">Tableau des différentes cryptomonnaies</h3>
+        """, unsafe_allow_html=True)
+        st.write('Dernière MAJ', df['last_updated'][0])
         st.dataframe(styled_df, use_container_width=True)
 
+        st.divider()
         # Choix de la crypto ppur afficher les graphs
-        coin_id = st.selectbox("Quelle Crypto veux tu choisir :", df['id'])
+        col_1, col_2, col_3 = st.columns(3,vertical_alignment='center')
+        st.markdown(""" <style>.selectbox-label {
+            line-height: 0.8px;
+            font-size: 30px;
+            color: white;
+            margin-bottom : 10px;
+            margin-top : 30px; } </style> """, unsafe_allow_html=True)
+
+        with col_1:
+            st.markdown('<p class="selectbox-label">Quelle Crypto veux-tu choisir :</p>', unsafe_allow_html=True)
+            coin_id = st.selectbox("", df['id'])
+            
         df_hist = price_history(coin_id) 
         coin_symbol = df.loc[df['id'] == coin_id, 'symbol'].values[0]  
         datedeb = df_hist['timestamp'][0].strftime("%Y-%m-%d")
-        datefin = df_hist['timestamp'][365]+timedelta(hours=1)
+        datefin = df_hist['timestamp'].iloc[-1]+timedelta(hours=1)
 
+        with col_2:
+            logo_url = get_crypto_logo(coin_id)
+            if logo_url:
+                st.markdown(f"<div style='text-align: center;margin-top: -40px;margin-bottom: -70px;margin-right: -100px'><img src='{logo_url}' width='100'></div>", unsafe_allow_html=True)
+            else:
+                st.write("Logo non disponible pour cette crypto.")
+        with col_3:
+            variation = df.loc[df['id'] == coin_id, 'Variation % 24h'].values[0]
+            color = 'green' if variation > 0 else 'red'
+            st.markdown(f"""
+    <h3 style='text-align: center;'>Dernière variation : {coin_id.capitalize()}<br>
+    <span style='color: {color}; font-size: 40px; display: block; text-align: center;'>{variation} %</span></h3>
+""", unsafe_allow_html=True)
+
+        st.text("")
+        st.text("")
+        st.markdown(f"<h3 style='text-align: center;color: goldenrod'>Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}</h3>",unsafe_allow_html=True)
         # Graph sur les 365j
         fig = px.line(df_hist, x="timestamp", y=f"{coin_id}_price", 
-                title=f"Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}",
+                #title=f"Variaton des prix de {coin_id.capitalize()} de {datedeb} à {datefin}",
                 labels={"timestamp": "Date", f"{coin_id}_price": "Prix"})
         fig.update_traces(line=dict(color='goldenrod'))
-        fig.update_layout( title_font=dict(color='goldenrod'))  
+        #fig.update_layout( title_font=dict(color='goldenrod'))  
         st.plotly_chart(fig, use_container_width=False)
         
         # Recherche du min, max et prix courant 
         maxi = round(df_hist[f'{coin_id}_price'].max(),2)
         mini = round(df_hist[f'{coin_id}_price'].min(),2)
-        current = round(df_hist[f'{coin_id}_price'][365],2)
+        current = round(df_hist[f'{coin_id}_price'].iloc[-1],2)
         st.markdown(f"<h2 style='text-align: center;line-height: 0.1'>La valeur sur l'année<br></h2>", unsafe_allow_html=True)
         col_a, col_b, col_c = st.columns(3, vertical_alignment='top')
         with col_a:
-            st.markdown(f"<h3 style='text-align: center;'>Minimale<br><span style='color: red;font-size : 45px; display: inline-block;'>{ mini}$</span></h3>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center;'>Minimale<br><span style='color: red;font-size : 45px; display: inline-block;'>{ mini}$</span></h4>", unsafe_allow_html=True)
         with col_b:
             st.markdown(f"<h4 style='text-align: center;;'>Courante<br> <span style='color: goldenrod; font-size : 45px;'>{current}$</span></h4>", unsafe_allow_html=True)
         with col_c:
@@ -131,7 +172,7 @@ def evolution():
         # Graph en fonction de la crypto choisi sur le 1er graph 
         fig1 = px.line(data, x='date',y='price')
         fig1.update_traces(line=dict(color='goldenrod'))
-        st.markdown(f"<h5 style='text-align: center;line-height: 0.05'>Historique d'évolution sur les 5 dernières années</h5>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align: center;line-height: 0.05;color: goldenrod'>Historique d'évolution sur les 5 dernières années</h3>", unsafe_allow_html=True)
         st.plotly_chart(fig1, use_container_width=True)
 
 # Fonction de Fabrice sur le Web Scarpping 
@@ -191,13 +232,10 @@ def page():
         
         with col_2:
             st.markdown("""
-        <h3 style="text-align: center; color: goldenrod">La Crypto en détail</h3>
+        <h1 style="text-align: center; color: goldenrod">La Crypto en détail</h1>
         """, unsafe_allow_html=True)
         st.text("")
         st.divider()
-        st.markdown("""
-        <h6 style="text-align: center;color: goldenrod">Tableau des différentes cryptomonnaies</h6>
-        """, unsafe_allow_html=True)
         
         # Appel de la fonction evolution pour afficher les valeurs les les courbes d'évolution
         evolution()
@@ -239,7 +277,7 @@ BTC = Un produit financier (ETF, indice) coté en bourse traditionnelle → Grap
 
     elif selection == 'test':
         return
- 
+     
 # Création du sidebar avec les différentes pages 
 with st.sidebar:
     date = datetime.now()
@@ -254,8 +292,3 @@ with st.sidebar:
     
 # Appel de la fonction page
 page()
-
-
-#image_url = f"https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png?1696501400"
-#if image_url:
-#    st.image(image_url, width=200)
