@@ -79,7 +79,7 @@ def accueil():
         <br>
         <span style= "font-size : 30px; font-weight: bold; color: goldenrod">
         <u>Comment acheter des cryptomonnaies ?</u></span><br>
-        Passer par des plateformes d’échange (comme Coinbase ou Binance), créer un compte, déposer de l’argent, puis acheter des cryptos (comme le Bitcoin).<br>
+        Passer par des plateformes d’échange (comme Coinbase ou Binance, Kraken), créer un compte, déposer de l’argent, puis acheter des cryptos (comme le Bitcoin).<br>
         <br>
         <span style= "font-size : 30px; font-weight: bold; color: goldenrod">
         <u>Risques à prendre en compte</u></span><br>
@@ -180,110 +180,11 @@ def evolution():
         st.markdown(f"<h3 style='text-align: center;line-height: 0.05;color: goldenrod'>Historique d'évolution sur les 5 dernières années</h3>", unsafe_allow_html=True)
         st.plotly_chart(fig1, use_container_width=True)
 
-# Fonction de Fabrice sur le Web Scarpping 
-def BTC_USD():
-    today = date.today()
-    d1 = today.strftime("%Y-%m-%d")
-    end_date = d1
-    d2 = date.today() - timedelta(days=1500)
-    d2 = d2.strftime("%Y-%m-%d")
-    start_date = d2
 
-    data = yf.download('BTC-USD', 
-                      start=start_date, 
-                      end=end_date, 
-                      progress=False)
-    data["Date"] = data.index
-    data = data[["Date", "Open", "High", "Low", "Close", "Volume"]]
-    data.reset_index(drop=True, inplace=True)
-    data.columns = [col[0] if isinstance(col, tuple) else col for col in data.columns]
-    return data
-
-# Determination du nombre de page et de la selection 
-def page():
-    if selection == 'Accueil':
-        # Mise en page des titres et du séparateur entre l'en-tête et le reste 
-        st.markdown("""
-        <h1 style="text-align: center; color: goldenrod; line-height: 0.1">Bienvenue sur votre appli Crypto</h1>
-        """, unsafe_allow_html=True)
-        st.markdown("""
-        <h4 style="text-align: center; color: goldenrod;line-height: 0.1">Designed by</h4>
-        """, unsafe_allow_html=True)
-        image_path = 'Projet3_image_sf.png'
-        with open(image_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode()
-        st.markdown(f"""
-            <div style="display: flex; justify-content: center;margin-top: -50px;margin-bottom: -50px;margin-left: -31px">
-            <img src="data:image/png;base64,{encoded_string}" style="width: 300px; height: 300px"/>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.divider()   
-        # Appel de la fonction accueil
-        accueil()
-        
-    # Si selection de la page details    
-    elif selection == 'Details':
-        col_1, col_2, col3 = st.columns(3, vertical_alignment='center')
-        with col_1:
-            image_path = 'Projet3_image_sf.png'
-            with open(image_path, "rb") as image_file:
-                encoded_string = base64.b64encode(image_file.read()).decode()
-            st.markdown(f"""
-            <div style="display: flex; justify-content: center;margin-top: -50px;margin-bottom: -50px;margin-left: -31px">
-            <img src="data:image/png;base64,{encoded_string}" style="width: 100px; height: 100px"/>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_2:
-            st.markdown("""
-        <h1 style="text-align: center; color: goldenrod">La Crypto en détail</h1>
-        """, unsafe_allow_html=True)
-        st.text("")
         st.divider()
-        
-        # Appel de la fonction evolution pour afficher les valeurs les les courbes d'évolution
-        evolution()
-        st.text("")
-        st.text("")
-    
-    # Si selection de la page Historique 
-    elif selection == 'Histo': 
-        database = BTC_USD()
 
-        database['Date'] = pd.to_datetime(database['Date'])
-        figure = go.Figure(data=[go.Candlestick(
-            x=database['Date'],
-            open=database['Open'],
-            high=database['High'],
-            low=database['Low'],
-            close=database['Close'])])
-
-        figure.update_layout(
-            title="Bitcoin Price Analysis",
-            xaxis_rangeslider_visible=False, 
-            xaxis_title="Date",  
-            yaxis_title="Price (USD)")
-        st.plotly_chart(figure, use_container_width=True)
-        
-        st.header("Pourquoi BTC-USD est continu ?")
-        st.write("""Les crypto-monnaies comme Bitcoin (BTC-USD) ne sont pas limitées aux horaires de la bourse. Elles s'échangent tout le temps sur diverses plateformes mondiales (Binance, Coinbase, Kraken, etc.).
-Ainsi, le graphique de BTC-USD est continu, car il reflète un marché sans interruption.
-Pourquoi le graphique "BTC" a des espaces ?
-Si "BTC" correspond à un ETF Bitcoin (comme BITO ou BTCC) ou un indice basé sur Bitcoin, alors ce produit est coté sur une bourse traditionnelle (ex : NASDAQ, NYSE).
-Ces bourses ont des horaires de trading spécifiques (généralement de 9h30 à 16h00 heure de New York, du lundi au vendredi).
-Pendant les week-ends et les jours fériés, aucune transaction n’a lieu, ce qui crée les espaces vides sur le graphique.
-Pourquoi la confusion avec le marché du Forex (USD) ?
-Le marché du Forex (échange de devises, y compris USD) fonctionne presque 24h/24 en semaine, mais il ferme le week-end.
-Cependant, BTC-USD ne dépend pas du Forex, mais du marché crypto global, qui lui ne s’arrête jamais.
-Conclusion :
-BTC-USD = Bitcoin coté en dollars, échangé en continu 24/7 → Graphique sans trous.
-BTC = Un produit financier (ETF, indice) coté en bourse traditionnelle → Graphique avec des espaces car la bourse ferme la nuit et les week-ends""")
-
-    elif selection == 'test':
-        dfid = pd.read_csv('histo1_generator.csv')
-        choix  = st.selectbox("Choix de la crypto : ",dfid['symbol'])
-        crypto_search = f'{choix}-USD' # Variable du symbole de la crypto à chercher
+        # Machine learning 
+        crypto_search = f'{coin_symbol}-USD' # Variable du symbole de la crypto à chercher
         def prediction(crypto_search):
             today = date.today()
             d1 = today.strftime("%Y-%m-%d")
@@ -403,7 +304,7 @@ BTC = Un produit financier (ETF, indice) coté en bourse traditionnelle → Grap
             'Predicted_Close': future_predictions
         })
 
-        #prediction_df
+        
 
                 # Créer une figure Plotly
         fig = go.Figure()
@@ -420,14 +321,144 @@ BTC = Un produit financier (ETF, indice) coté en bourse traditionnelle → Grap
                                 line=dict(dash='dash')))
 
         # Mise en page du graphique
-        fig.update_layout(title=f'Prix historique et prédictions du {crypto_search.upper()}',
-                        xaxis_title='Date',
-                        yaxis_title='Prix (USD)',
-                        legend_title='Légende',
-                        hovermode='x')
+        st.markdown(f"<h3 style='text-align: center;line-height: 0.05;color: goldenrod'>Prix historique et prédictions du {crypto_search.upper()}</h3>", unsafe_allow_html=True)
+        fig.update_layout(xaxis_title='Date',
+                          yaxis_title='Prix (USD)',
+                          legend_title='Légende',
+                           hovermode='x')
 
         # Afficher le graphique
         st.plotly_chart(fig)
+
+# Fonction de Fabrice sur le Web Scarpping 
+def BTC_USD():
+    today = date.today()
+    d1 = today.strftime("%Y-%m-%d")
+    end_date = d1
+    d2 = date.today() - timedelta(days=1500)
+    d2 = d2.strftime("%Y-%m-%d")
+    start_date = d2
+
+    data = yf.download('BTC-USD', 
+                      start=start_date, 
+                      end=end_date, 
+                      progress=False)
+    data["Date"] = data.index
+    data = data[["Date", "Open", "High", "Low", "Close", "Volume"]]
+    data.reset_index(drop=True, inplace=True)
+    data.columns = [col[0] if isinstance(col, tuple) else col for col in data.columns]
+    return data
+
+def plateforme():
+    st.markdown("""
+        <span style= "font-size : 30px; font-weight: bold; color: goldenrod">
+        <u>Coinbase</u></span><br>
+        
+        <h5>Points Positifs :</h5>
+        <span style= "font-size : 20px";
+           ▪️ Facilité d'utilisation : L'interface est conviviale et adaptée aux débutants. L'inscription et l'achat de cryptomonnaies sont simples.<br>
+           ▪️ Sécurité : Coinbase propose des mesures de sécurité robustes, telles que l'authentification à deux facteurs (2FA) et une couverture d'assurance en cas de piratage.<br>
+           ▪️ Régulation : Très régulé, particulièrement en Europe et aux États-Unis, ce qui inspire confiance aux utilisateurs.<br>
+           ▪️ Support client : Bonne qualité du service client, avec un support disponible via chat ou email.<br>
+           ▪️ Disponibilité de cryptomonnaies : Propose une sélection large et bien choisie de cryptomonnaies populaires.</span><br>
+        <br>
+        <h5>Points Négatifs :</h5>
+        <span style= "font-size : 20px";
+           ▪️ Frais élevés : Les frais de transaction et de retrait sont relativement élevés par rapport à d'autres plateformes.<br>
+           ▪️ Options limitées pour les traders avancés : Coinbase est plus destiné aux débutants qu'aux traders expérimentés, avec moins d'outils avancés.<br>
+           ▪️ Retraits limités : Les options de retrait de fonds peuvent être limitées et prendre plus de temps.<br>
+           ▪️ Frais de conversion : Des frais supplémentaires peuvent s'appliquer pour les conversions entre certaines cryptomonnaies.</span>
+        <br><br>
+        <span style= "font-size : 30px; font-weight: bold; color: goldenrod">
+        <u>Binance</u></span><br>        
+        
+        <h5>Points Positifs :</h5>
+        <span style= "font-size : 20px";
+            ▪️ Frais compétitifs : Binance est connue pour ses faibles frais de transaction, qui peuvent être réduits en utilisant son token natif, le BNB.<br>
+            ▪️ Large choix de cryptomonnaies : Offre un très grand nombre de cryptomonnaies à échanger, incluant des altcoins peu connus.<br>
+            ▪️ Outils avancés pour traders : Très adapté aux traders expérimentés, avec des options telles que le trading de marge, des futurs, des options et des outils d’analyse.<br>
+            ▪️ Liquidité élevée : Binance est l'une des plateformes les plus liquides, ce qui permet des transactions rapides et à des prix proches du marché.<br>
+            ▪️ Accessibilité globale : Disponible dans de nombreux pays, avec des supports pour plusieurs devises locales.</span><br>
+        <br>
+        <h5>Points Négatifs :</h5> 
+        <span style= "font-size : 20px";
+            ▪️ Complexité pour les débutants : L'interface peut être déroutante pour les nouveaux utilisateurs en raison de la multitude d'options proposées.<br>
+            ▪️ Problèmes de régulation : Binance a fait face à des problèmes de régulation dans certains pays, ce qui peut créer de l'incertitude pour les utilisateurs.<br>
+            ▪️ Sécurité : Bien que sécurisée, Binance a été victime de hacks dans le passé, ce qui peut inquiéter certains utilisateurs.<br>
+            ▪️ Support client limité : Le support client de Binance a souvent été critiqué pour sa lenteur et son efficacité.</span><br>
+        <br>
+        <span style= "font-size : 30px; font-weight: bold; color: goldenrod">
+        <u>Kraken</u></span><br> 
+        <h5>Points Positifs :</h5>
+        <span style= "font-size : 20px";
+            ▪️ Sécurité de niveau élevé : Kraken est reconnu pour ses mesures de sécurité avancées, incluant la conservation des fonds dans des portefeuilles froids et une authentification renforcée.<br>
+            ▪️ Frais compétitifs : Les frais de transaction sont relativement bas par rapport à certaines autres plateformes.<br>
+            ▪️ Transparence et régulation : Kraken est bien régulé et offre des informations détaillées sur ses processus de sécurité et de gestion des fonds.<br>
+            ▪️ Support client : Un support client réactif et bien noté.<br>
+            ▪️ Outils pour traders avancés : Kraken offre des outils avancés de trading, incluant des options de trading sur marge.</span><br>
+        <br>
+        <h5>Points Négatifs :</h5>
+        <span style= "font-size : 20px";
+            ▪️ Interface complexe pour les débutants : Kraken peut être difficile à naviguer pour ceux qui ne sont pas familiarisés avec les plateformes de trading de cryptomonnaies.<br>
+            ▪️ Sélection limitée de cryptomonnaies : Moins de cryptomonnaies disponibles que sur Binance, ce qui peut être un inconvénient pour ceux qui cherchent à diversifier leurs investissements.<br>
+            ▪️ Retraits et dépôts lents : Les transactions peuvent parfois prendre du temps, surtout pour les retraits.<br>
+            ▪️ Frais de dépôt pour certains types de paiements : Les frais pour certains types de paiements, comme les virements bancaires internationaux, peuvent être relativement élevés.</span>""", unsafe_allow_html=True)
+    
+# Determination du nombre de page et de la selection 
+def page():
+    if selection == 'Accueil':
+        # Mise en page des titres et du séparateur entre l'en-tête et le reste 
+        st.markdown("""
+        <h1 style="text-align: center; color: goldenrod; line-height: 0.1">Bienvenue sur votre appli Crypto</h1>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        <h4 style="text-align: center; color: goldenrod;line-height: 0.1">Designed by</h4>
+        """, unsafe_allow_html=True)
+        image_path = 'Projet3_image_sf.png'
+        with open(image_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center;margin-top: -50px;margin-bottom: -50px;margin-left: -31px">
+            <img src="data:image/png;base64,{encoded_string}" style="width: 300px; height: 300px"/>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()   
+        # Appel de la fonction accueil
+        accueil()
+        
+    # Si selection de la page details    
+    elif selection == 'Details':
+        col_1, col_2, col3 = st.columns(3, vertical_alignment='center')
+        with col_1:
+            image_path = 'Projet3_image_sf.png'
+            with open(image_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode()
+            st.markdown(f"""
+            <div style="display: flex; justify-content: center;margin-top: -50px;margin-bottom: -50px;margin-left: -31px">
+            <img src="data:image/png;base64,{encoded_string}" style="width: 100px; height: 100px"/>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_2:
+            st.markdown("""
+        <h1 style="text-align: center; color: goldenrod">La Crypto en détail</h1>
+        """, unsafe_allow_html=True)
+        st.text("")
+        st.divider()
+        
+        # Appel de la fonction evolution pour afficher les valeurs les les courbes d'évolution
+        evolution()
+        st.text("")
+        st.text("")
+    
+    # Si selection de la page Historique 
+    elif selection == 'Plateforme': 
+        st.markdown("""
+        <h1 style="text-align: center; color: goldenrod; line-height: 0.1">Comparaison entre differentes plateformes</h1>
+        """, unsafe_allow_html=True)
+        st.divider()
+        plateforme()
 
 # Création du sidebar avec les différentes pages 
 with st.sidebar:
@@ -439,7 +470,7 @@ with st.sidebar:
     st.image('Projet3_image_sf.png', width= 250)
     selection = option_menu(
             menu_title=None,
-            options = ['Accueil','Details','Histo', 'test'])
+            options = ['Accueil','Details','Plateforme'])
     
 # Appel de la fonction page
 page()
